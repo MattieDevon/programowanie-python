@@ -7,7 +7,8 @@ import json
 
 WEEK = 604800
 records = []
-
+DEF_FILE_NAME = "save"
+DEF_DIR = "notatki"
 
 #wpis
 class Record:
@@ -237,29 +238,29 @@ def closeEvents():
     print("W przyszłym tygodniu masz zapisanych " + str(count) + " wydarzeń, w tym " + str(hpCounter) + " określonych jako wysoki priorytet")
 
 
-def save():
+def save(directory):
     jsonstr = json.dumps([ob.toDict() for ob in records])
-    if os.path.isfile("./notatki/save_file.json"):
-        if os.path.isfile("./notatki/save_file.json.backup"):
+    if os.path.isfile(directory + "save_file.json"):
+        if os.path.isfile(directory + "/save_file.json.backup"):
             print("Usuwanie starego backupu!")
-            os.remove("./notatki/save_file.json.backup")
-        os.rename("./notatki/save_file.json", "./notatki/save_file.json.backup")
+            os.remove(directory + "/save_file.json.backup")
+        os.rename(directory + "/save_file.json", directory + "/save_file.json.backup")
         print("Utworzono backup!")
     try:
-        with open("./notatki/save_file.json", "w") as file:
+        with open(directory + "/save_file.json", "w") as file:
             file.write(jsonstr)
         print("zapis zakończony sukcesem!")
     except:
         pass
 
 
-def load(): #wczytuje zapisane notatki do listy
+def load(directory): #wczytuje zapisane notatki do listy
     global records
-    if os.path.isfile("./notatki/save_file.json") == False:
+    if os.path.isfile(directory + "/save_file.json") == False:
         print("Plik z zapisem nie istnieje")
     else:
         try:
-            with open ("./notatki/save_file.json", "r") as file:
+            with open(directory + "/save_file.json", "r") as file:
                 jsstrings = json.load(file)
                 records = []
                 for eh in jsstrings:
@@ -270,20 +271,29 @@ def load(): #wczytuje zapisane notatki do listy
 
 
 def initialize():
+    directory = input("Podaj ścieżkę folderu roboczego\n(jeżeli pole pozostanie puste zostanie użyta ścieżka domyslna)\n: ")
+    if directory == "":
+        directory = DEF_DIR
     print("Sprawdzanie czy folder z notatkami istnieje...")
-    if os.path.exists("notatki") == False:
+    if os.path.exists(directory) == False:
         print("Folder nie istnieje")
         try:
-            os.mkdir("notatki")
+            os.mkdir(directory)
             print("Folder został utworzony")
         except OSError as error:
             print(error)
+            quit()
+        except PermissionError as error:
+            print(error)
+            quit()
     else:
         print("Folder istnieje...")
+    return directory
 
 def printHelp():
     print("Zapisz - \"s\"")
-    print("Wczytaj - \"l\"")
+    #print("Wczytaj - \"l\"")
+    print("Wyszukaj frazy - \"f\"")
     print("Wyświetl wszystko - \"a\"")
     print("Wyświetl nadchodzące wydarzenia - \"c\"")
     print("Dodaj nowy wpis - \"n\"")
@@ -291,15 +301,26 @@ def printHelp():
     print("Usuń przeszłe wydarzenia - \"X\"")
     print("Wyjdź z programu - \"q\"")
 
+def search():
+    searchString = input("Podaj ciąg znaków do wyszukania: ")
+    searchString.lower()
+    ids = []
+    for i, note in enumerate(records):
+        if searchString.lower() in note.text.lower():
+            ids.append(i)
+    print("Znalaziono " + str(len(ids)) + " wpisów" )
+    for i in ids:
+        print(epoch2Date(records[i].date) + ", " + num2Weekday((datetime.datetime.strptime(epoch2Date(records[i].date),"%d-%m-%Y").weekday())))
+        print(records[i])
 
-def menu():
+def menu(directory):
 
     query = input("> ")
 
     if query == "S" or query == "s":
-        save()
-    elif query == "l":
-        load()
+        save(directory=directory)
+    elif query == "f" or query == "F":
+        search()
     elif query == "a":
         display()
     elif query == "A":
@@ -319,7 +340,7 @@ def menu():
         while True:
             question = input("Czy chcesz zapisać zmiany przed wyjściem? [T/N]: ")
             if question == "T" or question == "t":
-                save()
+                save(directory=directory)
                 break
             if question == "N" or question == "n":
                 break
@@ -341,15 +362,20 @@ def powitanie():
     print("Wpisz \"h\" aby uzyskać listę dostępnych poleceń")
 
 def main():
-    initialize()
+    directory = initialize()
     powitanie()
-    #load()
+    load(directory=directory)
     loop = True
     while loop:
-        loop = menu()
+        loop = menu(directory)
 
 if __name__ == '__main__':
     #test()
     main()
 
+'''
+todo
+search
+modify load
+'''
 
